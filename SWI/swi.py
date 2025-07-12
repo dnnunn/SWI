@@ -36,30 +36,22 @@ B = -62.7775
 
 
 def fasta_reader(file):
-    '''Converts .fasta to a pandas dataframe with accession as index
-    and sequence in a column 'sequence'
-    '''
+    """
+    Reads a standard FASTA file and returns a DataFrame with columns 'Accession' and 'Sequence'.
+    """
+    from Bio import SeqIO
+    import pandas as pd
+
     print('Reading file...', end='\n')
-    valid = re.compile('^[ACEDGFIHKMLNQPSRTWVY]+$')
-    fasta_df = pd.read_csv(file, sep='>', lineterminator='>',
-                           header=None, encoding='utf-8')
-    fasta_df[['Accession', 'Sequence']] = fasta_df[0].str.split('\n', 1,
-                                                                expand=True)
-    fasta_df['Accession'] = fasta_df['Accession']
-    fasta_df['Sequence'] = fasta_df['Sequence'].replace('\n', '', regex=True).\
-        astype(str).str.upper().replace('U', 'C')
-    fasta_df = fasta_df[fasta_df['Sequence'].apply(
-        lambda x: True if valid.search(x) else False)]
-    total_seq = fasta_df.shape[0]
-    fasta_df.drop(0, axis=1, inplace=True)
-    fasta_df = fasta_df[fasta_df.Sequence != '']
-    fasta_df = fasta_df[fasta_df.Sequence != 'NONE']
-    final_df = fasta_df.dropna()
-    remained_seq = final_df.shape[0]
-    if total_seq != remained_seq:
-        print("{} sequences were removed due to inconsistencies in"
-              "provided file.".format(total_seq-remained_seq))
-    return final_df
+    records = list(SeqIO.parse(file, "fasta"))
+    if not records:
+        raise ValueError("No sequences found in FASTA file.")
+    data = {
+        "Accession": [rec.id for rec in records],
+        "Sequence": [str(rec.seq).upper().replace('U', 'C') for rec in records]
+    }
+    df = pd.DataFrame(data)
+    return df
 
 
 def check_arg(args=None):
